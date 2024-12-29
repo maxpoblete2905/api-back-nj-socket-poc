@@ -1,9 +1,9 @@
 import express from "express";
-import { SERVER_PORT } from "../global/environment";
-import { Server as socketIOServer } from "socket.io"; // Importación corregida
 import http from "http";
-import { Client } from "socket.io/dist/client";
+import { SERVER_PORT } from "../global/environment";
+import { Server as socketIOServer } from "socket.io";
 import { simpleLogger } from "../config/logger";
+import { disconectSocket, messageSocket } from "../socket/socket";
 
 export default class Server {
   private static _intance: Server;
@@ -18,31 +18,28 @@ export default class Server {
     this.httpServer = new http.Server(this.app);
     this.io = new socketIOServer(this.httpServer, {
       cors: {
-        origin: "http://localhost:4200", // Permite el origen de tu frontend
-        methods: ["GET", "POST"], // Métodos permitidos
-        allowedHeaders: ["Content-Type", "Authorization"], // Encabezados permitidos
-        credentials: true, // Permite credenciales (cookies, autorización, etc.)
+        origin: "http://localhost:4200",
+        methods: ["GET", "POST"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+        credentials: true,
       },
     });
 
-    this.onSocket();
+    this.listenSocket();
   }
 
   public static get intace() {
     return this._intance || (this._intance = new this());
   }
 
-  onSocket() {
+  private listenSocket() {
     simpleLogger.info("Escuchando conexión -- socket");
 
     this.io.on("connection", (client) => {
-      // Corregido el nombre de 'conennction' a 'connection'
       simpleLogger.info("Cliente conectado");
 
-      // Aquí puedes manejar eventos del cliente, como 'disconnect', 'message', etc.
-      client.on("disconnect", () => {
-        simpleLogger.info("Cliente desconectado");
-      });
+      messageSocket(client, this.io);
+      disconectSocket(client);
     });
   }
 
